@@ -47,7 +47,6 @@ def save_smart_video_to_output(temp_filename, prefix, folder, date_subfolder, na
             pattern = re.compile(rf"^{re.escape(resolved_prefix)}_(\d+){re.escape(real_ext)}$")
             max_num = 0
             if os.path.exists(out_dir):
-                # Optimized scanning
                 with os.scandir(out_dir) as entries:
                     for entry in entries:
                         match = pattern.match(entry.name)
@@ -138,20 +137,30 @@ class SmartSaveVideoNode:
         temp_filename = f"{resolved_prefix}_preview_{uuid.uuid4().hex}{format}"
         full_path = os.path.join(output_dir, temp_filename)
 
-        frames_np = (torch.clamp(frames_tensor, 0.0, 1.0).cpu().numpy() * 255).astype(np.uint8)
-        
-        if format in[".gif", ".webp"]:
-            pil_images = [Image.fromarray(f[:, :, :3]) for f in frames_np]
+        height, width = frames_tensor.shape[1], frames_tensor.shape[2]
+        if width % 2 != 0: width -= 1
+        if height % 2 != 0: height -= 1
+
+        batch_size = len(frames_tensor)
+        chunk_size = 32 # Verarbeitet 32 Frames gleichzeitig (perfekte Balance aus Speed & RAM)
+
+        if format in [".gif", ".webp"]:
+            pil_images =[]
+            for start_idx in range(0, batch_size, chunk_size):
+                end_idx = min(start_idx + chunk_size, batch_size)
+                # 8-Bit Konvertierung direkt auf der GPU (Extremer Speed-Boost)
+                chunk_np = (torch.clamp(frames_tensor[start_idx:end_idx], 0.0, 1.0) * 255.0).to(torch.uint8).cpu().numpy()
+                for j in range(chunk_np.shape[0]):
+                    frame_data = np.ascontiguousarray(chunk_np[j, :height, :width, :3])
+                    pil_images.append(Image.fromarray(frame_data))
+                
             append_imgs = pil_images[1:] if len(pil_images) > 1 else[]
-            
-            # Fixed rounding error for accurate duration
             duration_ms = int(round(1000.0 / fps))
             save_args = {"save_all": True, "append_images": append_imgs, "duration": duration_ms, "loop": 0}
             
             if format == ".webp":
                 if webp_lossless: save_args["lossless"] = True
                 else: save_args["quality"] = quality
-                
                 if embed_workflow:
                     exif = pil_images[0].getexif()
                     if prompt is not None:
@@ -161,12 +170,6 @@ class SmartSaveVideoNode:
             pil_images[0].save(full_path, format=format.replace(".", "").upper(), **save_args)
 
         else:
-            height, width = frames_np.shape[1], frames_np.shape[2]
-            if width % 2 != 0: width -= 1
-            if height % 2 != 0: height -= 1
-            
-            frames_np = np.ascontiguousarray(frames_np[:, :height, :width, :3])
-
             container = av.open(full_path, mode="w")
             if embed_workflow:
                 if prompt is not None: container.metadata["prompt"] = json.dumps(prompt)
@@ -180,6 +183,7 @@ class SmartSaveVideoNode:
             v_stream.pix_fmt = "yuv420p"
 
             if format == ".mp4":
+                # Preset "fast" ist ein guter Kompromiss, bei extremen Verzögerungen könnte man hier "ultrafast" nutzen
                 crf = int(50 - ((quality - 1) / 99) * 35)
                 v_stream.options = {"crf": str(crf), "preset": "fast"}
             else: 
@@ -187,7 +191,9 @@ class SmartSaveVideoNode:
                 v_stream.options = {"crf": str(crf), "b": "0"}
 
             a_stream = None
-            audio_frame = None
+            audio_np = None
+            layout = 'mono'
+            sample_rate = 44100
             
             if audio is not None:
                 waveform = audio.get("waveform")
@@ -196,28 +202,42 @@ class SmartSaveVideoNode:
                 if waveform is not None:
                     audio_codec = "aac" if format == ".mp4" else "libopus"
                     a_stream = container.add_stream(audio_codec, rate=sample_rate)
-                    
                     if waveform.dim() == 3:
                         waveform = waveform.squeeze(0)
-                        
                     audio_np = np.ascontiguousarray(waveform.cpu().numpy())
                     layout = 'stereo' if audio_np.shape[0] == 2 else 'mono'
-                    
-                    audio_frame = av.AudioFrame.from_ndarray(audio_np, format='fltp', layout=layout)
-                    audio_frame.sample_rate = sample_rate
 
-            for i, frame_data in enumerate(frames_np):
-                v_frame = av.VideoFrame.from_ndarray(frame_data, format="rgb24")
-                v_frame.pts = i 
-                for packet in v_stream.encode(v_frame): 
-                    container.mux(packet)
+            # 1. Video encodieren (In schnellen Chunks)
+            for start_idx in range(0, batch_size, chunk_size):
+                end_idx = min(start_idx + chunk_size, batch_size)
+                # Berechnet 32 Frames als kompaktes 8-Bit Array auf der GPU - spart massiv PCIe Bandbreite
+                chunk_np = (torch.clamp(frames_tensor[start_idx:end_idx], 0.0, 1.0) * 255.0).to(torch.uint8).cpu().numpy()
+                
+                for j in range(chunk_np.shape[0]):
+                    frame_data = np.ascontiguousarray(chunk_np[j, :height, :width, :3])
+                    v_frame = av.VideoFrame.from_ndarray(frame_data, format="rgb24")
+                    v_frame.pts = start_idx + j
+                    for packet in v_stream.encode(v_frame): 
+                        container.mux(packet)
             
             for packet in v_stream.encode(): 
                 container.mux(packet)
 
-            if a_stream is not None and audio_frame is not None:
-                for packet in a_stream.encode(audio_frame):
-                    container.mux(packet)
+            # 2. Audio in kleinen Paketen anhängen
+            if a_stream is not None and audio_np is not None:
+                total_samples = audio_np.shape[1]
+                audio_chunk_size = 8192  
+                for start_idx in range(0, total_samples, audio_chunk_size):
+                    end_idx = min(start_idx + audio_chunk_size, total_samples)
+                    chunk_arr = np.ascontiguousarray(audio_np[:, start_idx:end_idx])
+                    
+                    audio_frame = av.AudioFrame.from_ndarray(chunk_arr, format='fltp', layout=layout)
+                    audio_frame.sample_rate = sample_rate
+                    audio_frame.pts = None
+                    
+                    for packet in a_stream.encode(audio_frame):
+                        container.mux(packet)
+                        
                 for packet in a_stream.encode():
                     container.mux(packet)
 
