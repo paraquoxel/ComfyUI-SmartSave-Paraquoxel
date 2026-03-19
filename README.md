@@ -33,7 +33,7 @@ You can find and install this node directly via the ComfyUI Manager. Just search
 
 2. Clone this repository:
 
-    git clone https://github.com/YOUR-USERNAME/ComfyUI-SmartSave-Paraquoxel.git
+    git clone https://github.com/paraquoxel/ComfyUI-SmartSave-Paraquoxel.git
 
 3. Navigate into the folder and install the requirements (specifically "av" for video processing):
 
