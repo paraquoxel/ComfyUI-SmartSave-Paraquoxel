@@ -47,8 +47,14 @@ You can find the nodes in the ComfyUI Add Node menu under:
 * paraquoxel-comfy -> 📸 SmartSave IMG (paraquoxel)
 * paraquoxel-comfy -> 🎥 SmartSave VID (paraquoxel)
 
-### Tip: Toggle Settings
-Both nodes feature a "⚙️ Toggle Settings" button. Once you have configured your DPI, Format, Quality, and Paths, you can collapse the settings to save space on your ComfyUI canvas!
+### 💡 Tips & Advanced Features
+
+* **⚙️ Toggle Settings:** Both nodes feature a "Toggle Settings" button. Once you have configured your DPI, Format, Quality, and Paths, you can collapse the settings to save space on your ComfyUI canvas!
+* **💾 Auto Save = Automatic Batch Save:** By default, the nodes act as interactive previewers, waiting for you to manually click "Save". However, if you turn on the `auto_save` toggle, the node transforms into a fully automated saver, instantly batch-saving every generated image or video to your hard drive.
+* **📁 Absolute Paths:** Typing a name in the `folder` widget creates a subfolder inside ComfyUI's standard `output` directory. However, you can also type a full **absolute path** (e.g., `D:\MyAIPictures` or `/mnt/external_drive`). The node will automatically detect this and save your files directly to your custom location.
+* **🎵 Audio Override (VID Node):** The node automatically extracts bundled audio from the new ComfyUI `VIDEO` pipeline (e.g., LTX-Video). However, if you connect a different audio source to the dedicated `audio` input pin, it will **override** the original audio. Perfect for adding custom background music!
+* **🎯 Using "Save Range" (IMG Node):** When generating large batches, click the **Save Range** button to open a prompt. Enter specific selections like `1, 3, 5-8`. The node will smartly parse this and only save those exact images, ignoring the rest!
+* **📏 Dimension Safety Auto-Crop (VID Node):** Standard video codecs (H.264/H.265) will crash if a video's width or height is an odd number (e.g., 501x703). To prevent ComfyUI from freezing, the node automatically crops 1 pixel off odd dimensions to make them even (e.g., 500x702) before encoding.
 
 ## 📄 License
 MIT License. See the LICENSE file for details.
