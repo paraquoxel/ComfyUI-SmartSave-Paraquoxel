@@ -120,9 +120,29 @@ class SmartSaveVideoNode:
                 images=None, video=None, audio=None, prompt=None, extra_pnginfo=None):
         
         frames_tensor = None
+        final_audio = audio
+        
+        # --- ROBUSTE VIDEO & AUDIO EXTRAKTION ---
         if video is not None:
-            if hasattr(video, "get_components"): frames_tensor = video.get_components().images
-            elif hasattr(video, "images"): frames_tensor = video.images
+            if isinstance(video, dict):
+                frames_tensor = video.get("images")
+                if final_audio is None and "audio" in video:
+                    final_audio = video["audio"]
+            elif isinstance(video, torch.Tensor):
+                frames_tensor = video
+            else:
+                # ComfyUI's neues natives Video-Objekt
+                if hasattr(video, "get_components"): 
+                    comps = video.get_components()
+                    frames_tensor = comps.images
+                    # HIER lag der Fehler: Das Audio muss ebenfalls aus comps geholt werden!
+                    if final_audio is None and hasattr(comps, "audio") and comps.audio is not None:
+                        final_audio = comps.audio
+                elif hasattr(video, "images"): 
+                    frames_tensor = video.images
+                    if final_audio is None and hasattr(video, "audio") and video.audio is not None:
+                        final_audio = video.audio
+
         if frames_tensor is None and images is not None:
             frames_tensor = images
             
@@ -142,13 +162,12 @@ class SmartSaveVideoNode:
         if height % 2 != 0: height -= 1
 
         batch_size = len(frames_tensor)
-        chunk_size = 32 # Verarbeitet 32 Frames gleichzeitig (perfekte Balance aus Speed & RAM)
+        chunk_size = 32 
 
-        if format in [".gif", ".webp"]:
+        if format in[".gif", ".webp"]:
             pil_images =[]
             for start_idx in range(0, batch_size, chunk_size):
                 end_idx = min(start_idx + chunk_size, batch_size)
-                # 8-Bit Konvertierung direkt auf der GPU (Extremer Speed-Boost)
                 chunk_np = (torch.clamp(frames_tensor[start_idx:end_idx], 0.0, 1.0) * 255.0).to(torch.uint8).cpu().numpy()
                 for j in range(chunk_np.shape[0]):
                     frame_data = np.ascontiguousarray(chunk_np[j, :height, :width, :3])
@@ -183,7 +202,6 @@ class SmartSaveVideoNode:
             v_stream.pix_fmt = "yuv420p"
 
             if format == ".mp4":
-                # Preset "fast" ist ein guter Kompromiss, bei extremen Verzögerungen könnte man hier "ultrafast" nutzen
                 crf = int(50 - ((quality - 1) / 99) * 35)
                 v_stream.options = {"crf": str(crf), "preset": "fast"}
             else: 
@@ -195,9 +213,24 @@ class SmartSaveVideoNode:
             layout = 'mono'
             sample_rate = 44100
             
-            if audio is not None:
-                waveform = audio.get("waveform")
-                sample_rate = audio.get("sample_rate", 44100)
+            # --- ROBUSTE AUDIO-DATEN EXTRAKTION ---
+            if final_audio is not None:
+                waveform = None
+                
+                # Prüfen auf Standard ComfyUI Dictionary
+                if isinstance(final_audio, dict):
+                    waveform = final_audio.get("waveform")
+                    sample_rate = final_audio.get("sample_rate", 44100)
+                # Prüfen auf direkte Objekt-Eigenschaften (Neue ComfyUI API)
+                elif hasattr(final_audio, "waveform"):
+                    waveform = final_audio.waveform
+                    sample_rate = getattr(final_audio, "sample_rate", getattr(final_audio, "frame_rate", 44100))
+                # Tiefe Extraktion, falls das Audio wieder in einem Wrapper steckt
+                elif hasattr(final_audio, "get_components"):
+                    a_comps = final_audio.get_components()
+                    if hasattr(a_comps, "waveform"):
+                        waveform = a_comps.waveform
+                        sample_rate = getattr(a_comps, "sample_rate", getattr(a_comps, "frame_rate", 44100))
                 
                 if waveform is not None:
                     audio_codec = "aac" if format == ".mp4" else "libopus"
@@ -207,10 +240,9 @@ class SmartSaveVideoNode:
                     audio_np = np.ascontiguousarray(waveform.cpu().numpy())
                     layout = 'stereo' if audio_np.shape[0] == 2 else 'mono'
 
-            # 1. Video encodieren (In schnellen Chunks)
+            # 1. Video encodieren 
             for start_idx in range(0, batch_size, chunk_size):
                 end_idx = min(start_idx + chunk_size, batch_size)
-                # Berechnet 32 Frames als kompaktes 8-Bit Array auf der GPU - spart massiv PCIe Bandbreite
                 chunk_np = (torch.clamp(frames_tensor[start_idx:end_idx], 0.0, 1.0) * 255.0).to(torch.uint8).cpu().numpy()
                 
                 for j in range(chunk_np.shape[0]):
