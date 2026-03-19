@@ -323,7 +323,7 @@ app.registerExtension({
                 if (!existingWidget) {
                     let mediaEl = isVideo ? document.createElement("video") : document.createElement("img");
                     if (isVideo) {
-                        mediaEl.controls = true; mediaEl.loop = true; mediaEl.muted = true; mediaEl.autoplay = true;
+                        mediaEl.controls = true; mediaEl.loop = true; mediaEl.autoplay = true;
                     }
                     
                     mediaEl.style.width = "100%";
