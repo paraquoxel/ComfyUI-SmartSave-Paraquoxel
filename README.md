@@ -56,6 +56,8 @@ You can find the nodes in the ComfyUI Add Node menu under:
 * **⏱️ Audio & Video Length (VID Node):** If your audio track is longer than your video (or vice versa), the node will *not* trim the data. The final saved file will be as long as the longest input, which might result in frozen frames or silent endings (standard FFmpeg behavior). Use an external "Audio Trim/Crop" node beforehand to perfectly sync their lengths!
 * **🎯 Using "Save Range" (IMG Node):** When generating large batches, click the **Save Range** button to open a prompt. Enter specific selections like `1, 3, 5-8`. The node will smartly parse this and only save those exact images, ignoring the rest!
 * **📏 Dimension Safety Auto-Crop (VID Node):** Standard video codecs (H.264/H.265) will crash if a video's width or height is an odd number (e.g., 501x703). To prevent ComfyUI from freezing, the node automatically crops 1 pixel off odd dimensions to make them even (e.g., 500x702) before encoding.
+* **🔄 Changing Settings After Generation:** ComfyUI only applies node settings during a run. If you generate a video as `.mp4`, change the dropdown to `.gif`, and click the manual "Save Video" button, it will still save as `.mp4`. To actually change the video format or codec, change the setting and click **Queue Prompt** again (ComfyUI will instantly use the cached frames!). 
+*Note: The Image node is an exception – it can convert formats (e.g., PNG to JPG) on-the-fly when clicking save!*
 
 ## 📄 License
 MIT License. See the LICENSE file for details.
