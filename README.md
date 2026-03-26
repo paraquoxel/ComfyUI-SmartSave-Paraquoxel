@@ -23,10 +23,7 @@ An advanced, highly polished, and feature-rich saving suite for ComfyUI.
 
 ## 📦 Installation
 
-### Method 1: ComfyUI Manager (Recommended)
-You can find and install this node directly via the ComfyUI Manager. Just search for **SmartSave Paraquoxel**.
-
-### Method 2: Manual Install
+### Method: Manual Install
 1. Open your terminal and navigate to your ComfyUI custom_nodes folder:
 
     cd ComfyUI/custom_nodes
