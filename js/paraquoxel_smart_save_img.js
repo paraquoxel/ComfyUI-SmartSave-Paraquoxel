@@ -219,14 +219,14 @@ app.registerExtension({
                     const options = {
                         prefix: safePrefix,
                         folder: getWidget("folder")?.value || "",
-                        date_subfolder: getWidget("date_subfolder")?.value || false,
+                        date_subfolder: getWidget("date_subfolder")?.value ?? false,
                         naming: getWidget("naming")?.value || "Sequential",
                         format: getWidget("format")?.value || ".png",
-                        quality: getWidget("quality")?.value || 100,
-                        webp_lossless: getWidget("webp_lossless")?.value || false,
-                        dpi: getWidget("dpi")?.value || 96,
-                        embed_workflow: getWidget("embed_workflow")?.value || true,
-                        png_optimize: getWidget("png_optimize")?.value || false
+                        quality: getWidget("quality")?.value ?? 100,
+                        webp_lossless: getWidget("webp_lossless")?.value ?? false,
+                        dpi: getWidget("dpi")?.value ?? 96,
+                        embed_workflow: getWidget("embed_workflow")?.value ?? true,
+                        png_optimize: getWidget("png_optimize")?.value ?? false
                     };
 
                     try {
