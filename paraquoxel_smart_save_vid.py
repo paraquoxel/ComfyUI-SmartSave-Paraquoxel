@@ -131,11 +131,9 @@ class SmartSaveVideoNode:
             elif isinstance(video, torch.Tensor):
                 frames_tensor = video
             else:
-                # ComfyUI's neues natives Video-Objekt
                 if hasattr(video, "get_components"): 
                     comps = video.get_components()
                     frames_tensor = comps.images
-                    # HIER lag der Fehler: Das Audio muss ebenfalls aus comps geholt werden!
                     if final_audio is None and hasattr(comps, "audio") and comps.audio is not None:
                         final_audio = comps.audio
                 elif hasattr(video, "images"): 
@@ -189,10 +187,16 @@ class SmartSaveVideoNode:
             pil_images[0].save(full_path, format=format.replace(".", "").upper(), **save_args)
 
         else:
-            container = av.open(full_path, mode="w")
+            # --- MP4/WEBM CONTAINER METADATA FIX ---
+            container_options = {"movflags": "use_metadata_tags"} if format == ".mp4" else {}
+            container = av.open(full_path, mode="w", options=container_options)
+            
             if embed_workflow:
-                if prompt is not None: container.metadata["prompt"] = json.dumps(prompt)
-                if extra_pnginfo is not None: container.metadata["extra_pnginfo"] = json.dumps(extra_pnginfo)
+                if prompt is not None: 
+                    container.metadata["prompt"] = json.dumps(prompt)
+                if extra_pnginfo is not None:
+                    for k, v in extra_pnginfo.items():
+                        container.metadata[k] = json.dumps(v)
 
             fps_fraction = Fraction(int(fps * 1000), 1000)
             video_codec = "libvpx-vp9" if format == ".webm" else ("libx265" if "H.265" in mp4_codec else "libx264")
@@ -217,15 +221,12 @@ class SmartSaveVideoNode:
             if final_audio is not None:
                 waveform = None
                 
-                # Prüfen auf Standard ComfyUI Dictionary
                 if isinstance(final_audio, dict):
                     waveform = final_audio.get("waveform")
                     sample_rate = final_audio.get("sample_rate", 44100)
-                # Prüfen auf direkte Objekt-Eigenschaften (Neue ComfyUI API)
                 elif hasattr(final_audio, "waveform"):
                     waveform = final_audio.waveform
                     sample_rate = getattr(final_audio, "sample_rate", getattr(final_audio, "frame_rate", 44100))
-                # Tiefe Extraktion, falls das Audio wieder in einem Wrapper steckt
                 elif hasattr(final_audio, "get_components"):
                     a_comps = final_audio.get_components()
                     if hasattr(a_comps, "waveform"):
