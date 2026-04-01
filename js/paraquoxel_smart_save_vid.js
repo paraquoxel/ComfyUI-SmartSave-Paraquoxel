@@ -246,11 +246,11 @@ app.registerExtension({
                             
                             // Added optional chaining fallback to prevent crash if widget goes missing
                             const options = {
-                                prefix: getWidget("prefix")?.value || "ComfyUI",
-                                folder: getWidget("folder")?.value || "",
-                                date_subfolder: getWidget("date_subfolder")?.value || false,
-                                naming: getWidget("naming")?.value || "Sequential",
-                                format: getWidget("format")?.value || ".mp4"
+                                prefix: getWidget("prefix")?.value ?? "ComfyUI",
+                                folder: getWidget("folder")?.value ?? "",
+                                date_subfolder: getWidget("date_subfolder")?.value ?? false,
+                                naming: getWidget("naming")?.value ?? "Sequential",
+                                format: getWidget("format")?.value ?? ".mp4"
                             };
 
                             api.fetchApi("/paraquoxel/smart_save_video", {
