@@ -5,6 +5,13 @@ An advanced, highly polished, and feature-rich saving suite for ComfyUI.
 
 <img width="1968" height="772" alt="confyui_paraquoxel" src="https://github.com/user-attachments/assets/0bd6a77d-5bad-43c9-abb6-9ff1631afbeb" />
 
+## 🚨 Important Compatibility Notice
+
+> **Note on ComfyUI Modern UI (V2):** 
+> The new experimental "Modern Node Design" in ComfyUI completely changes how mouse clicks and canvas elements are handled. Because SmartSave uses highly customized, interactive canvas buttons, **the UI buttons (Save, Toggle Settings, etc.) will currently not respond to clicks in the Modern UI**. 
+> 
+> 👉 **Please use the classic ComfyUI interface** to enjoy the full interactivity of these nodes!
+
 ## ✨ Features
 
 ### 📸 SmartSave IMG
