@@ -3,7 +3,7 @@
 An advanced, highly polished, and feature-rich saving suite for ComfyUI. 
 **SmartSave** provides custom Canvas-UI buttons, hybrid saving methods (Auto/Manual), deep metadata injection, and robust handling of both Images and Videos (including Audio!).
 
-<img width="1700" height="1038" alt="Screenshot 2026-04-04 123139" src="https://github.com/user-attachments/assets/5481a247-416a-401e-a886-baf984119ce9" />
+<img width="1640" height="995" alt="Screenshot 2026-04-04 182034" src="https://github.com/user-attachments/assets/d64c3190-c7c0-4688-a70c-2e46c5511cfc" />
 
 ## 🚨 Important Compatibility Notice
 
