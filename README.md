@@ -3,7 +3,7 @@
 An advanced, highly polished, and feature-rich saving suite for ComfyUI. 
 **SmartSave** provides custom Canvas-UI buttons, hybrid saving methods (Auto/Manual), deep metadata injection, and robust handling of both Images and Videos (including Audio!).
 
-<img width="1968" height="772" alt="confyui_paraquoxel" src="https://github.com/user-attachments/assets/0bd6a77d-5bad-43c9-abb6-9ff1631afbeb" />
+<img width="1700" height="1038" alt="Screenshot 2026-04-04 123139" src="https://github.com/user-attachments/assets/5481a247-416a-401e-a886-baf984119ce9" />
 
 ## 🚨 Important Compatibility Notice
 
